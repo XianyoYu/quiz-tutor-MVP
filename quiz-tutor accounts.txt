@@ -1,0 +1,6 @@
+Supabase:
+	ps:sQnPkYS69Vf5wWd6
+
+gmail:
+	ac:yu0402.business@gmail.com
+	pw:T9v$zQm!2Xy@P6r#Wf
