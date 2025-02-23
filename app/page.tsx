@@ -73,7 +73,7 @@ export default function Home() {
 
       <div className="bg-white rounded-3xl shadow-2xl p-10 w-full max-w-2xl text-center transition duration-300 transform hover:scale-105">
         <h1 className="text-5xl font-extrabold text-gray-800 mb-8 tracking-wide">英文模擬考試網站</h1>
-        <p className="text-lg text-gray-600 mb-10">提供 TOEIC 練習與模擬考試，助您輕鬆提升英語能力！</p>
+        <p className="text-lg text-gray-600 mb-10">提供英語練習與模擬考試，助您輕鬆提升英語能力！</p>
         <button
           onClick={handleStartPractice}
           className="bg-gradient-to-r from-blue-500 to-teal-500 text-white px-8 py-4 rounded-full shadow-xl hover:opacity-90 transition duration-300 text-xl"
