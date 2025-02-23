@@ -1,5 +1,4 @@
 "use client";
-import React from "react";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
@@ -9,16 +8,16 @@ import { supabase } from "@/utils/supabaseClient";
 export default function Quiz() {
   const params = useParams();
   const { stage } = params;
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isGuest } = useAuth();
   const router = useRouter();
   const [questions, setQuestions] = useState<any[]>([]);
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [showResult, setShowResult] = useState(false);
   const [score, setScore] = useState(0);
 
-  // 載入關卡題目
+  // 載入題目
   useEffect(() => {
-    if (!isLoading && !user) {
+    if (!isLoading && !user && !isGuest) {
       router.push("/login");
       return;
     }
@@ -37,9 +36,9 @@ export default function Quiz() {
     };
 
     loadQuestions();
-  }, [stage, user, isLoading]);
+  }, [stage, user, isLoading, isGuest]);
 
-  // 提交測驗結果
+  // 提交測驗
   const submitQuiz = async () => {
     const correctCount = questions.filter(q => 
       answers[q.id] === q.correct_index
@@ -47,28 +46,53 @@ export default function Quiz() {
     const newScore = parseFloat((correctCount / questions.length * 100).toFixed(1));
 
     // 更新進度
-    await supabase.from("user_stage_progress").upsert({
-      user_id: user.id,
-      stage_number: Number(stage),
-      is_unlocked: true,
-      highest_score: Math.max(
-        newScore,
-        (await supabase
-          .from("user_stage_progress")
-          .select("highest_score")
-          .eq("user_id", user.id)
-          .eq("stage_number", stage))
-          .data[0]?.highest_score || 0
-      )
-    });
+    if (isGuest) {
+      const guestProgress = JSON.parse(localStorage.getItem("guest_progress") || "{}");
+      const currentStage = Number(stage);
+      const nextStage = currentStage + 1;
 
-    // 解鎖下一關
-    if (Number(stage) < 20) {
+      // 更新當前關卡分數
+      guestProgress[currentStage] = {
+        is_unlocked: true,
+        highest_score: Math.max(
+          newScore,
+          guestProgress[currentStage]?.highest_score || 0
+        )
+      };
+
+      // 解鎖下一關
+      if (currentStage < 20) {
+        guestProgress[nextStage] = guestProgress[nextStage] || {
+          is_unlocked: true,
+          highest_score: 0
+        };
+      }
+
+      localStorage.setItem("guest_progress", JSON.stringify(guestProgress));
+    } else {
       await supabase.from("user_stage_progress").upsert({
         user_id: user.id,
-        stage_number: Number(stage) + 1,
-        is_unlocked: true
+        stage_number: Number(stage),
+        is_unlocked: true,
+        highest_score: Math.max(
+          newScore,
+          (await supabase
+            .from("user_stage_progress")
+            .select("highest_score")
+            .eq("user_id", user.id)
+            .eq("stage_number", stage))
+            .data[0]?.highest_score || 0
+        )
       });
+
+      // 解鎖下一關
+      if (Number(stage) < 20) {
+        await supabase.from("user_stage_progress").upsert({
+          user_id: user.id,
+          stage_number: Number(stage) + 1,
+          is_unlocked: true
+        });
+      }
     }
 
     setScore(newScore);

@@ -5,33 +5,41 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/utils/supabaseClient";
 
 export default function Stages() {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, isGuest } = useAuth();
   const router = useRouter();
   const [stages, setStages] = useState([]);
-  const [progress, setProgress] = useState({});
+  const [progress, setProgress] = useState<Record<number, any>>({});
 
   useEffect(() => {
-    if (!isLoading && !user) {
+    if (!isLoading && !user && !isGuest) {
       router.push("/login");
       return;
     }
 
     const fetchData = async () => {
+      // 獲取所有關卡
       const { data: stagesData } = await supabase.from("stages").select("*");
-      setStages(stagesData);
+      setStages(stagesData || []);
 
-      const { data: progressData } = await supabase
-        .from("user_stage_progress")
-        .select("*")
-        .eq("user_id", user.id);
-      
-      const progressMap = {};
-      progressData.forEach(p => progressMap[p.stage_number] = p);
-      setProgress(progressMap);
+      // 獲取進度
+      if (isGuest) {
+        const guestProgress = JSON.parse(localStorage.getItem("guest_progress") || "{}");
+        setProgress(guestProgress);
+      } else {
+        const { data: progressData } = await supabase
+          .from("user_stage_progress")
+          .select("*")
+          .eq("user_id", user?.id || "");
+        const progressMap = progressData?.reduce((acc, curr) => {
+          acc[curr.stage_number] = curr;
+          return acc;
+        }, {});
+        setProgress(progressMap || {});
+      }
     };
 
-    if (user) fetchData();
-  }, [user, isLoading]);
+    fetchData();
+  }, [user, isLoading, isGuest]);
 
   if (isLoading) {
     return (
@@ -52,7 +60,7 @@ export default function Stages() {
 
       <h1 className="text-5xl font-bold text-center mb-12 text-gray-800">選擇關卡</h1>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 max-w-5xl mx-auto">
-        {stages.map(stage => (
+        {stages.map((stage) => (
           <div 
             key={stage.stage_number}
             className="p-6 bg-white rounded-2xl shadow-lg hover:shadow-2xl transition-shadow transform hover:-translate-y-2"
