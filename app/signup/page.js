@@ -22,27 +22,45 @@ export default function Signup() {
     setLoading(true);
     setError("");
     setSuccess("");
-
+  
     if (password !== confirmPassword) {
       setError("密碼不一致，請重新確認。");
       setLoading(false);
       return;
     }
-
-    const { error } = await supabase.auth.signUp({
+  
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
     });
-
+  
     if (error) {
       setError(error.message);
     } else {
+      // 註冊成功後，插入第一關的解鎖狀態
+      await supabase.from("user_stage_progress").upsert([
+        {
+          user_id: data.user?.id,
+          category_id: 1, // 文法題
+          stage_number: 1,
+          is_unlocked: true,
+          highest_score: 0,
+        },
+        {
+          user_id: data.user?.id,
+          category_id: 2, // 單字題
+          stage_number: 1,
+          is_unlocked: true,
+          highest_score: 0,
+        },
+      ]);
+  
       setSuccess("註冊成功！請檢查您的電子郵件進行驗證。");
       setEmail("");
       setPassword("");
       setConfirmPassword("");
     }
-
+  
     setLoading(false);
   };
 
